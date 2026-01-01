@@ -1,0 +1,46 @@
+pipeline {
+    agent {
+        node {
+            label 'develop'
+        }
+    }
+    environment {
+        myvar='mysonar'
+    }
+    tools {
+        maven 'mymaven'
+    }
+
+    stages {
+        stage('code') {
+            steps {
+                git branch: 'develop', url: 'https://github.com/saikrishnachintala19/demoreponew-test.git'
+            }
+        }
+        stage('build'){
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('CQA') {
+            steps {
+            sh '''
+            mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar \
+            -Dsonar.projectKey=mypro \
+            -Dsonar.host.url=http://16.171.145.236:9000 \
+            -Dsonar.login=fe1aa1e43ec3f53d90830d6c1a06dcc04a5a9060
+            '''
+            }
+        }
+        stage('artifact'){
+            steps {
+                nexusArtifactUploader artifacts: [[artifactId: 'myweb', classifier: '', file: 'target/myweb-8.6.9.war', type: 'war']], credentialsId: 'nexus', groupId: 'in.javahome', nexusUrl: '56.228.24.92:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'mydev', version: '8.6.9'
+            }
+        }
+        stage ('deploy') {
+            steps {
+                deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: 'devnews', path: '', url: 'http://13.60.215.102:8080/')], contextPath: 'mydev', war: 'target/*.war'
+            }
+        }
+    }
+}
